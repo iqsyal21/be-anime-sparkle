@@ -1,4 +1,4 @@
-import { PlaylistCache } from "../models/PlaylistCache.js";
+import { PlaylistAnime } from "../models/PlaylistAnime.js";
 import { fetchAllPlaylists } from "../utils/youtubeApi.js";
 
 const allowedChannels = {
@@ -21,24 +21,24 @@ export const getPlaylists = async (req, res) => {
             return res.status(400).json({ error: "Channel tidak valid" });
         }
 
-        const cache = await PlaylistCache.findOne({ channel: channelKey });
+        const dataAnime = await PlaylistAnime.findOne({ channel: channelKey });
         const now = Date.now();
         const maxAge = 1000 * 60 * 60 * 6;
 
-        if (cache && now - cache.updatedAt.getTime() < maxAge) {
-            console.log("✅ Ambil dari cache DB");
-            return res.json(cache.data);
+        if (dataAnime && now - dataAnime.updatedAt.getTime() < maxAge) {
+            console.log("✅ Ambil dari dataAnime DB");
+            return res.json(dataAnime.data);
         }
 
         const channelId = allowedChannels[channelKey];
         const playlistData = await fetchAllPlaylists(channelId, process.env.YOUTUBE_API_KEY);
 
-        if (cache) {
-            cache.data = playlistData;
-            cache.updatedAt = new Date();
-            await cache.save();
+        if (dataAnime) {
+            dataAnime.data = playlistData;
+            dataAnime.updatedAt = new Date();
+            await dataAnime.save();
         } else {
-            await PlaylistCache.create({ channel: channelKey, data: playlistData });
+            await PlaylistAnime.create({ channel: channelKey, data: playlistData });
         }
 
         console.log("🌐 Ambil semua playlist baru dari YouTube API");
@@ -56,18 +56,18 @@ export const getRandomAnimes = async (req, res) => {
             return res.status(400).json({ error: "Region tidak valid. Gunakan 'indonesia' atau 'global'." });
         }
 
-        const caches = await PlaylistCache.find({
+        const dataAnimes = await PlaylistAnime.find({
             channel: { $in: regionChannels[region] },
         });
 
-        if (!caches || caches.length === 0) {
+        if (!dataAnimes || dataAnimes.length === 0) {
             return res.status(404).json({ error: "Belum ada data playlist di database untuk region ini" });
         }
 
         let allPlaylists = [];
-        caches.forEach((cache) => {
-            if (cache.data && cache.data.items) {
-                allPlaylists = allPlaylists.concat(cache.data.items);
+        dataAnimes.forEach((dataAnime) => {
+            if (dataAnime.data && dataAnime.data.items) {
+                allPlaylists = allPlaylists.concat(dataAnime.data.items);
             }
         });
 
